@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Risk RWA Data Model – Interactive ER Diagram</title>
+
+    <!-- Mermaid JS -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --container-bg: #ffffff;
+            --text-main: #2c3e50;
+            --src-color: #2E86DE;
+            --der-color: #E67E22;
+            --ref-color: #27AE60;
+            --rpt-color: #2C3E50;
+            --disabled: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 40px 20px;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        h1 { margin-bottom: 5px; font-weight: 700; }
+        p.subtitle { margin-top: 0; margin-bottom: 30px; opacity: 0.8; font-style: italic; }
+
+        .diagram-outer {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .diagram-container {
+            background: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            display: inline-block;
+            min-width: 90%;
+            overflow-x: auto;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Interactive Legend / Filter Buttons */
+        .legend {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            border: none;
+            cursor: pointer;
+            padding: 10px 22px;
+            border-radius: 25px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            outline: none;
+        }
+
+        .filter-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .filter-btn:active { transform: translateY(0); }
+        .filter-btn.inactive { background-color: var(--disabled) !important; opacity: 0.6; }
+
+        .src { background: var(--src-color); }
+        .der { background: var(--der-color); }
+        .ref { background: var(--ref-color); }
+        .rpt { background: var(--rpt-color); }
+
+        #instruction {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Credit Risk RWA Data Model</h1>
+    <p class="subtitle">Entity Relationship Diagram — Structural Flow Analysis</p>
+
+    <div class="diagram-outer">
+        <div class="diagram-container" id="container">
+            <div class="mermaid" id="graph">
+erDiagram
+    %% ================= SOURCE TABLES =================
+    SRC_CUSTOMER_MASTER {
+        string customer_id PK
+        string customer_name
+        string customer_type
+    }
+    SRC_LOAN_EXPOSURE {
+        string loan_id PK
+        string customer_id FK
+        decimal exposure_amount
+        string product_type
+    }
+    SRC_COLLATERAL {
+        string loan_id PK
+        decimal collateral_value
+    }
+
+    %% ================= DERIVED TABLES =================
+    DER_EXPOSURE_CLASS {
+        string loan_id PK
+        string exposure_class
+    }
+    DER_COLLATERAL_RATIO {
+        string loan_id PK
+        decimal coverage_ratio
+    }
+    DER_SECURED_EXPOSURE {
+        string loan_id PK
+        decimal exposure_factor
+        decimal secured_exposure
+    }
+    DER_RWA_CALCULATION {
+        string loan_id PK
+        decimal risk_weight
+        decimal rwa_amount
+    }
+
+    %% ================= REPORT TABLE =================
+    RPT_CREDIT_RWA_REPORT {
+        string loan_id PK
+        string customer_id
+        string exposure_class
+        decimal secured_exposure
+        decimal risk_weight
+        decimal rwa_amount
+    }
+
+    %% ================= REFERENCE TABLES =================
+    CPA_EXPOSURE_CLASS_REF_TBL {
+        string customer_type PK
+        string exposure_class
+    }
+    CPA_COLLATERAL_TREATMENT_REF_TBL {
+        decimal coverage_ratio_min PK
+        decimal coverage_ratio_max
+        decimal exposure_factor
+    }
+    CPA_RISK_WEIGHT_REF_TBL {
+        string exposure_class PK
+        decimal risk_weight
+    }
+
+    %% ================= RELATIONSHIPS =================
+    CPA_EXPOSURE_CLASS_REF_TBL ||--o{ DER_EXPOSURE_CLASS : lookup
+    SRC_CUSTOMER_MASTER ||--o{ SRC_LOAN_EXPOSURE : has
+    SRC_LOAN_EXPOSURE ||--|| SRC_COLLATERAL : secured_by
+    SRC_LOAN_EXPOSURE ||--|| DER_EXPOSURE_CLASS : derives
+    SRC_CUSTOMER_MASTER ||--|| DER_EXPOSURE_CLASS : classifies
+    SRC_LOAN_EXPOSURE ||--|| DER_COLLATERAL_RATIO : calculates
+    SRC_COLLATERAL ||--|| DER_COLLATERAL_RATIO : contributes
+    CPA_COLLATERAL_TREATMENT_REF_TBL ||--o{ DER_SECURED_EXPOSURE : policy
+    DER_COLLATERAL_RATIO ||--|| DER_SECURED_EXPOSURE : determines
+    CPA_RISK_WEIGHT_REF_TBL ||--o{ DER_RWA_CALCULATION : policy
+    DER_SECURED_EXPOSURE ||--|| DER_RWA_CALCULATION : feeds
+    DER_RWA_CALCULATION ||--|| RPT_CREDIT_RWA_REPORT : reports
+            </div>
+        </div>
+    </div>
+
+    <div class="legend">
+        <button class="filter-btn src" onclick="toggleLayer('SRC', this)">Source Tables</button>
+        <button class="filter-btn der" onclick="toggleLayer('DER', this)">Derived Tables</button>
+        <button class="filter-btn ref" onclick="toggleLayer('CPA', this)">Policy Ref Tables</button>
+        <button class="filter-btn rpt" onclick="toggleLayer('RPT', this)">Reporting Table</button>
+    </div>
+    <p id="instruction">Select layers to isolate specific stages of the data transformation lifecycle.</p>
+
+    <script>
+        const state = {
+            SRC: true,
+            DER: true,
+            CPA: true,
+            RPT: true
+        };
+
+        function toggleLayer(prefix, btn) {
+            state[prefix] = !state[prefix];
+            
+            if (state[prefix]) {
+                btn.classList.remove('inactive');
+            } else {
+                btn.classList.add('inactive');
+            }
+
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const svg = document.querySelector('.mermaid svg');
+            if (!svg) return;
+
+            // Mermaid ER diagrams often render nodes inside g tags
+            // We look for patterns in IDs and classes to identify entities
+            const nodes = svg.querySelectorAll('g.node, g[id^="entity-"], g.er');
+            
+            nodes.forEach(node => {
+                // Find the text content inside the node to identify which table it is
+                const textElement = node.querySelector('text');
+                if (!textElement) return;
+                
+                const label = textElement.textContent || "";
+                let visible = true;
+                
+                if (label.startsWith('SRC_') && !state.SRC) visible = false;
+                if (label.startsWith('DER_') && !state.DER) visible = false;
+                if (label.startsWith('CPA_') && !state.CPA) visible = false;
+                if (label.startsWith('RPT_') && !state.RPT) visible = false;
+
+                node.style.transition = "opacity 0.3s, filter 0.3s";
+                node.style.opacity = visible ? "1" : "0.1";
+                node.style.filter = visible ? "none" : "grayscale(100%)";
+                node.style.pointerEvents = visible ? "auto" : "none";
+            });
+
+            // Handle edges and labels
+            const edges = svg.querySelectorAll('path.relationshipLine, g.relationshipLabel, path.edgePath');
+            edges.forEach(edge => {
+                edge.style.transition = "opacity 0.3s";
+                // If any layer is inactive, we dim relationships to focus on active nodes
+                const activeCount = Object.values(state).filter(v => v === true).length;
+                edge.style.opacity = activeCount < 4 ? "0.3" : "1";
+            });
+            
+            // If all are active, ensure full visibility
+            if (Object.values(state).every(v => v === true)) {
+                nodes.forEach(n => { n.style.opacity = "1"; n.style.filter = "none"; });
+                edges.forEach(e => e.style.opacity = "1");
+            }
+        }
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: "default",
+            securityLevel: 'loose',
+            er: {
+                useMaxWidth: true,
+                layoutDirection: 'LR',
+                fontSize: 14,
+                entityPadding: 15
+            }
+        });
+
+        // Initialize filtering once SVG is rendered
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length && document.querySelector('.mermaid svg')) {
+                    applyFilters();
+                    observer.disconnect();
+                }
+            });
+        });
+
+        observer.observe(document.getElementById('graph'), { childList: true });
+
+        window.addEventListener('load', () => {
+            setTimeout(applyFilters, 1000); 
+        });
+    </script>
+
+</body>
+</html>

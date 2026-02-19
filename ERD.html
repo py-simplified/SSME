@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Credit Risk RWA Data Model – ER Diagram</title>
+
+<!-- Mermaid JS -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f6f8;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+    }
+
+    h1 {
+        margin-bottom: 10px;
+    }
+
+    .diagram-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        overflow-x: auto;
+    }
+
+    .legend {
+        margin-top: 15px;
+        font-size: 14px;
+    }
+
+    .legend span {
+        display: inline-block;
+        margin-right: 15px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: white;
+    }
+
+    .src { background: #2E86DE; }
+    .der { background: #E67E22; }
+    .ref { background: #27AE60; }
+    .rpt { background: #2C3E50; }
+</style>
+</head>
+
+<body>
+
+<h1>Credit Risk RWA Data Model</h1>
+<p>Entity Relationship Diagram</p>
+
+<div class="diagram-container">
+<div class="mermaid">
+
+erDiagram
+
+    %% ================= SOURCE TABLES =================
+    SRC_CUSTOMER_MASTER {
+        string customer_id PK
+        string customer_name
+        string customer_type
+    }
+
+    SRC_LOAN_EXPOSURE {
+        string loan_id PK
+        string customer_id FK
+        decimal exposure_amount
+        string product_type
+    }
+
+    SRC_COLLATERAL {
+        string loan_id PK
+        decimal collateral_value
+    }
+
+    %% ================= DERIVED TABLES =================
+    DER_EXPOSURE_CLASS {
+        string loan_id PK
+        string exposure_class
+    }
+
+    DER_COLLATERAL_RATIO {
+        string loan_id PK
+        decimal coverage_ratio
+    }
+
+    DER_SECURED_EXPOSURE {
+        string loan_id PK
+        decimal exposure_factor
+        decimal secured_exposure
+    }
+
+    DER_RWA_CALCULATION {
+        string loan_id PK
+        decimal risk_weight
+        decimal rwa_amount
+    }
+
+    %% ================= REPORT TABLE =================
+    RPT_CREDIT_RWA_REPORT {
+        string loan_id PK
+        string customer_id
+        string exposure_class
+        decimal secured_exposure
+        decimal risk_weight
+        decimal rwa_amount
+    }
+
+    %% ================= REFERENCE TABLES =================
+    CPA_EXPOSURE_CLASS_REF_TBL {
+        string customer_type PK
+        string exposure_class
+    }
+
+    CPA_COLLATERAL_TREATMENT_REF_TBL {
+        decimal coverage_ratio_min PK
+        decimal coverage_ratio_max
+        decimal exposure_factor
+    }
+
+    CPA_RISK_WEIGHT_REF_TBL {
+        string exposure_class PK
+        decimal risk_weight
+    }
+
+    %% ================= RELATIONSHIPS =================
+
+    SRC_CUSTOMER_MASTER ||--o{ SRC_LOAN_EXPOSURE : has
+    SRC_LOAN_EXPOSURE ||--|| SRC_COLLATERAL : secured_by
+
+    SRC_CUSTOMER_MASTER ||--|| DER_EXPOSURE_CLASS : classifies
+    SRC_LOAN_EXPOSURE ||--|| DER_EXPOSURE_CLASS : derives
+
+    SRC_LOAN_EXPOSURE ||--|| DER_COLLATERAL_RATIO : calculates
+    SRC_COLLATERAL ||--|| DER_COLLATERAL_RATIO : contributes
+
+    DER_COLLATERAL_RATIO ||--|| DER_SECURED_EXPOSURE : determines
+    DER_SECURED_EXPOSURE ||--|| DER_RWA_CALCULATION : feeds
+
+    DER_RWA_CALCULATION ||--|| RPT_CREDIT_RWA_REPORT : reports
+
+    CPA_EXPOSURE_CLASS_REF_TBL ||--o{ DER_EXPOSURE_CLASS : lookup
+    CPA_COLLATERAL_TREATMENT_REF_TBL ||--o{ DER_SECURED_EXPOSURE : policy
+    CPA_RISK_WEIGHT_REF_TBL ||--o{ DER_RWA_CALCULATION : policy
+
+</div>
+</div>
+
+<div class="legend">
+    <span class="src">Source Tables</span>
+    <span class="der">Derived Tables</span>
+    <span class="ref">Policy Reference Tables</span>
+    <span class="rpt">Reporting Table</span>
+</div>
+
+<script>
+mermaid.initialize({
+    startOnLoad: true,
+    theme: "default",
+    er: { useMaxWidth: true }
+});
+</script>
+
+</body>
+</html>
